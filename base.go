@@ -2,6 +2,7 @@ package gowindows
 
 import (
 	"fmt"
+	"golang.org/x/sys/windows"
 	"syscall"
 	"unsafe"
 
@@ -13,6 +14,12 @@ const ptrSize = unsafe.Sizeof(uintptr(0))
 const ERROR_SUCCESS syscall.Errno = 0
 
 const INVALID_HANDLE_VALUE Handle = Handle(^uintptr(0))
+
+const NO_ERROR =0
+
+const ERROR_IO_PENDING = 997
+
+const INFINITE = syscall.INFINITE
 
 // 转换为 []byte 切片
 // 注意，请自己保证内存引用，按文档，reflect.SliceHeader 不会保存 data 的指针，可能会被垃圾回收。
@@ -56,3 +63,18 @@ type HMODULE = Handle
 
 type WCHAR = wchar_t
 type wchar_t = uint16
+
+type Overlapped = windows.Overlapped
+
+
+type CallError struct {
+	r1 DWord
+}
+
+func newCallError(r1 DWord) error {
+	return &CallError{r1: r1}
+}
+
+func (e *CallError) Error() string {
+	return fmt.Sprintf("r1:%X", e.r1)
+}

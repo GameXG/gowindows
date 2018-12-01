@@ -241,3 +241,90 @@ func TestGetIpForwardTable(t *testing.T) {
 	}
 	//	t.Logf("%#v", rows)
 }
+
+
+/*
+// 手工wifi切换网络测试通过
+func TestNotifyAddrChangeSync(t *testing.T) {
+	t.Log("TestNotifyAddrChangeSync...")
+	err:=NotifyAddrChange(nil,nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("TestNotifyAddrChangeSync ok")
+}*/
+
+/*
+// 手工wifi切换网络测试通过
+func TestNotifyRouteChangeSync(t *testing.T) {
+	t.Log("TestNotifyRouteChangeSync ...")
+	err:=NotifyRouteChange(nil,nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("TestNotifyRouteChangeSync ok")
+}
+*/
+
+
+/*
+// 手工wifi切换网络测试通过
+func TestNotifyAddrChangeASync(t *testing.T) {
+	t.Log("TestNotifyAddrChangeASync...")
+
+	overlap := Overlapped{}
+	hEvent, err := WSACreateEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	overlap.HEvent = windows.Handle(hEvent)
+
+	hand := Handle(0)
+
+	err = NotifyAddrChange(&hand, &overlap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := WaitForSingleObject(overlap.HEvent, INFINITE)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if event != WAIT_OBJECT_0 {
+		t.Fatal(event, " != WAIT_OBJECT_0")
+	}
+
+	t.Log("TestNotifyAddrChangeASync ok")
+}
+*/
+
+/*
+// 手工wifi切换网络测试通过
+func TestNotifyRouteChangeASync(t *testing.T) {
+	t.Log("TestNotifyRouteChangeASync...")
+
+	overlap := Overlapped{}
+	hEvent, err := WSACreateEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	overlap.HEvent = windows.Handle(hEvent)
+
+	hand := Handle(0)
+
+	err = NotifyRouteChange(&hand, &overlap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := WaitForSingleObject(overlap.HEvent, INFINITE)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if event != WAIT_OBJECT_0 {
+		t.Fatal(event, " != WAIT_OBJECT_0")
+	}
+
+	t.Log("TestNotifyRouteChangeASync ok")
+}
+*/

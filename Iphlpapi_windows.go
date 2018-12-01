@@ -17,6 +17,8 @@ var (
 	getIpForwardTable    = iphlpapi.NewProc("GetIpForwardTable")
 	createIpForwardEntry = iphlpapi.NewProc("CreateIpForwardEntry")
 	deleteIpForwardEntry = iphlpapi.NewProc("DeleteIpForwardEntry")
+	notifyAddrChange     = iphlpapi.NewProc("NotifyAddrChange")
+	notifyRouteChange    = iphlpapi.NewProc("NotifyRouteChange")
 )
 
 // IP_ADAPTER_ADDRESSES_LH
@@ -296,4 +298,52 @@ func DeleteIpForwardEntry(row *MibIpForwardRow) error {
 	}
 
 	return nil
+}
+
+//https://docs.microsoft.com/en-us/windows/desktop/api/iphlpapi/nf-iphlpapi-notifyaddrchange
+//DWORD NotifyAddrChange(
+//  PHANDLE      Handle,
+//  LPOVERLAPPED overlapped
+//);
+func NotifyAddrChange(handle *Handle, overlapped *Overlapped) error {
+	r1, _, e1 := notifyAddrChange.Call(uintptr(unsafe.Pointer(handle)), uintptr(unsafe.Pointer(overlapped)))
+	if handle == nil && overlapped == nil {
+		if r1 == NO_ERROR {
+			return nil
+		}
+	} else {
+		if r1 == ERROR_IO_PENDING {
+			return nil
+		}
+	}
+
+	if e1 != ERROR_SUCCESS {
+		return e1
+	} else {
+		return fmt.Errorf("r1:%v", r1)
+	}
+}
+
+//DWORD NotifyRouteChange(
+//  PHANDLE      Handle,
+//  LPOVERLAPPED overlapped
+//);
+//https://docs.microsoft.com/en-us/windows/desktop/api/iphlpapi/nf-iphlpapi-notifyroutechange
+func NotifyRouteChange(handle *Handle, overlapped *Overlapped) error {
+	r1, _, e1 := notifyRouteChange.Call(uintptr(unsafe.Pointer(handle)), uintptr(unsafe.Pointer(overlapped)))
+	if handle == nil && overlapped == nil {
+		if r1 == NO_ERROR {
+			return nil
+		}
+	} else {
+		if r1 == ERROR_IO_PENDING {
+			return nil
+		}
+	}
+
+	if e1 != ERROR_SUCCESS {
+		return e1
+	} else {
+		return fmt.Errorf("r1:%v", r1)
+	}
 }

@@ -67,6 +67,18 @@ const (
 	ERROR_NO_DATA             = 232
 )
 
+const (
+	STATUS_WAIT_0           DWord = 0
+	STATUS_ABANDONED_WAIT_0 DWord = 0x00000080
+	STATUS_USER_APC         DWord = 0x000000C0
+
+	WAIT_OBJECT_0      DWord = STATUS_WAIT_0 + 0
+	WAIT_FAILED        DWord = 0xFFFFFFFF
+	WAIT_ABANDONED     DWord = STATUS_ABANDONED_WAIT_0 + 0
+	WAIT_ABANDONED_0   DWord = STATUS_ABANDONED_WAIT_0 + 0
+	WAIT_IO_COMPLETION DWord = STATUS_USER_APC
+)
+
 type MibIpForwardRow struct {
 	ForwardDest      [4]byte //目标网络
 	ForwardMask      [4]byte //掩码

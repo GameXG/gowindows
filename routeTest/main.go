@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/GameXG/gowindows"
+	"github.com/gamexg/gowindows"
 )
 
 func main() {
