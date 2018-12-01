@@ -69,7 +69,7 @@ func CreateMmapWithSecurityDescriptor(name string, size uint32, write bool, secu
 		return nil, fmt.Errorf("MapViewOfFile, %v", err)
 	}
 
-	m := &Mmap{fileHandle: Handle(fileHandle), addr: unsafe.Pointer(addr), size: int(size)}
+	m := &Mmap{fileHandle: Handle(fileHandle), addr:addr, size: int(size)}
 
 	runtime.SetFinalizer(m, (*Mmap).Close)
 
@@ -106,7 +106,7 @@ func OpenMmap(name string, size uint32, write bool) (*Mmap, error) {
 		return nil, fmt.Errorf("MapViewOfFile, %v", err)
 	}
 
-	m := &Mmap{fileHandle: fileHandle, addr: unsafe.Pointer(addr), size: int(size)}
+	m := &Mmap{fileHandle: fileHandle, addr: addr, size: int(size)}
 
 	runtime.SetFinalizer(m, (*Mmap).Close)
 
@@ -115,13 +115,13 @@ func OpenMmap(name string, size uint32, write bool) (*Mmap, error) {
 
 // 关闭、释放
 func (m *Mmap) Close() error {
-	if m.addr != unsafe.Pointer(uintptr(0)) {
+	if m.addr != uintptr(0) {
 		err := windows.UnmapViewOfFile(uintptr(m.addr))
 		if err != nil {
 			return fmt.Errorf("UnmapViewOfFile, %v", err)
 		}
 		m.size = 0
-		m.addr = unsafe.Pointer(uintptr(0))
+		m.addr = uintptr(0)
 	}
 
 	if m.fileHandle != 0 {
