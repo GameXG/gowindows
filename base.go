@@ -23,7 +23,7 @@ const INFINITE = syscall.INFINITE
 
 // 转换为 []byte 切片
 // 注意，请自己保证内存引用，按文档，reflect.SliceHeader 不会保存 data 的指针，可能会被垃圾回收。
-// 另外记得 cgo C 库里面有这个实现。
+// cgo C 库里面有这个实现 C.GoBytes，但是 C.GoBytes 是拷贝内存的实现，内存共享等情况不能使用。
 func ToBytes(data uintptr, len, cap int) []byte {
 	var o []byte
 	sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&o)))
