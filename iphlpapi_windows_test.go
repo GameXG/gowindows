@@ -81,7 +81,7 @@ func TestStruct(t *testing.T) {
 			t.Errorf("%v !=252", o)
 		}
 		if o := unsafe.Offsetof(ipAdapterAddresses.connectionType); o != 268 {
-			t.Errorf("%v !=268", o) // 64位 这里开始出现错误 ,272 !=268
+			t.Errorf("%v !=268", o)
 		}
 		if o := unsafe.Offsetof(ipAdapterAddresses.dhcpv6Server); o != 280 {
 			t.Errorf("%v !=280", o)

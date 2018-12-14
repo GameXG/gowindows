@@ -118,7 +118,7 @@ type IpAdapterAddresses struct {
 	luid                   IfLuid
 	dhcpv4Server           windows.SocketAddress
 	compartmentId          CompartmentId
-	networkGuid            NetworkGuid //64位 错误位置
+	networkGuid            NetworkGuid
 	connectionType         ConnectionType
 	tunnelType             TunnelType
 	dhcpv6Server           windows.SocketAddress
