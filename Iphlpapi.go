@@ -109,6 +109,7 @@ func (row *MibIpForwardRow) String() string {
 func (row *MibIpForwardRow) GetForwardDest() net.IP {
 	return net.IP(row.ForwardDest[:])
 }
+
 func (row *MibIpForwardRow) SetForwardDest(v net.IP) error {
 	ipv4 := v.To4()
 	if len(ipv4) != net.IPv4len {
@@ -118,9 +119,11 @@ func (row *MibIpForwardRow) SetForwardDest(v net.IP) error {
 	copy(row.ForwardDest[:], ipv4)
 	return nil
 }
+
 func (row *MibIpForwardRow) GetForwardMask() net.IPMask {
 	return net.IPMask(row.ForwardMask[:])
 }
+
 func (row *MibIpForwardRow) SetForwardMask(v net.IPMask) error {
 	ipv4 := net.IP(v).To4()
 	if len(ipv4) != net.IPv4len {
@@ -130,9 +133,11 @@ func (row *MibIpForwardRow) SetForwardMask(v net.IPMask) error {
 	copy(row.ForwardMask[:], ipv4)
 	return nil
 }
+
 func (row *MibIpForwardRow) GetForwardNextHop() net.IP {
 	return net.IP(row.ForwardNextHop[:])
 }
+
 func (row *MibIpForwardRow) SetForwardNextHop(v net.IP) error {
 	ipv4 := v.To4()
 	if len(ipv4) != net.IPv4len {

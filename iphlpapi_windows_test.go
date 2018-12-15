@@ -18,16 +18,16 @@ func TestAdapterAddresses(t *testing.T) {
 	}
 
 	for _, aa := range as {
-		//fmt.Printf("\r\nFriendlyName:%v\r\n", aa.GetFriendlyName())
-		//fmt.Printf("IfType:%v\r\n", aa.IfType)
-		//fmt.Printf("Description:%v\r\n", aa.GetDescription())
+		t.Logf("\r\nFriendlyName:%v\r\n", aa.GetFriendlyName())
+		t.Logf("IfType:%v\r\n", aa.IfType)
+		t.Logf("Description:%v\r\n", aa.GetDescription())
 
 		luid, err := aa.GetLuid()
 		if err != nil {
 			t.Error(err)
 		}
 		_ = luid
-		//fmt.Printf("luid:%v\r\n", luid)
+		t.Logf("luid:%v\r\n", luid)
 
 		guid, err := aa.GetNetworkGuid()
 		if err != nil {
@@ -39,17 +39,35 @@ func TestAdapterAddresses(t *testing.T) {
 		}
 		_ = guidStr
 		// 奇怪输出的全部都是一个值:{A5735777-2F40-11E8-A039-806E6F6E6963}
-		//fmt.Printf("guid:%v\r\n", guidStr)
+		t.Logf("guid:%v\r\n", guidStr)
 
-		gas, err := aa.GetGatewayAddress()
+		uas,err:=aa.GetUnicastIpAddress()
+		if err != nil {
+			t.Errorf("GetUnicastIpAddress,%v",err)
+		}
+		for _,v:=range uas{
+			t.Logf("UnicastAddress:%v",v)
+		}
+
+
+		gas, err := aa.GetGatewayIpAddress()
 		if err != nil {
 			t.Error(err)
 		}
-		_ = gas
-		// 输出的全部是空，不清楚原因。
-		//fmt.Printf("IpAdapterGatewayAddress:%#v\r\n", gas)
+		for _,v:=range gas{
+			t.Logf("Gateway:%v",v)
+		}
 
-		//	fmt.Printf("connectionType:%v\r\n", aa.connectionType)
+		t.Logf("connectionType:%v\r\n", aa.connectionType)
+
+		dns,err:=aa.GetDnsServerIpAddress()
+		if err != nil {
+			t.Error(err)
+		}
+
+		for _,v:=range dns{
+			t.Logf("DNS:%v",v)
+		}
 
 	}
 }

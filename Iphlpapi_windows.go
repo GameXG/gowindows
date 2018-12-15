@@ -1,6 +1,7 @@
 package gowindows
 
 import (
+	"net"
 	"syscall"
 
 	"unsafe"
@@ -208,6 +209,109 @@ func (aa *IpAdapterAddresses) GetGatewayAddress() ([]*IpAdapterGatewayAddress, e
 	}
 
 	return res, nil
+}
+
+func (aa *IpAdapterAddresses) GetGatewayIpAddress() ([]net.IPAddr, error) {
+	ads,err:=aa.GetGatewayAddress()
+	if err != nil {
+		return nil,err
+	}
+
+	res:=make([]net.IPAddr,0,len(ads))
+	for _,v:=range ads{
+		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+		if err != nil {
+			return nil,err
+		}
+		res=append(res,ipAddr)
+	}
+	return res,nil
+}
+
+func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny)(net.IPAddr,error) {
+	sa,err:=rd.Sockaddr()
+	if err != nil {
+		return net.IPAddr{},err
+	}
+
+	switch sa := sa.(type) {
+	case *syscall.SockaddrInet4:
+		return net.IPAddr{IP: net.IPv4(sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3])}, nil
+	case *syscall.SockaddrInet6:
+		return net.IPAddr{IP: make(net.IP, net.IPv6len)}, nil
+	default:
+		return net.IPAddr{}, fmt.Errorf("不支持的地址类型，%v", sa)
+	}
+}
+
+func (aa *IpAdapterAddresses) GetDnsServerAddress() ([]*windows.IpAdapterDnsServerAdapter, error) {
+	tz := aa.Length
+	fz := unsafe.Offsetof(aa.FirstDnsServerAddress) + unsafe.Sizeof(aa.FirstDnsServerAddress)
+
+	// 判断结构是否包含了指定的字段
+	// 不同版本的 windows 包含的字段不同，老版本的不包含新版本的字段。
+	if tz < uint32(fz) {
+		return nil, fmt.Errorf("Length(%v)<%v", tz, fz)
+	}
+
+	res := make([]*windows.IpAdapterDnsServerAdapter, 0, 1)
+
+	for v:=aa.FirstDnsServerAddress;v!=nil;v=v.Next{
+		res=append(res,v)
+	}
+
+	return res, nil
+}
+func (aa *IpAdapterAddresses) GetDnsServerIpAddress() ([]net.IPAddr, error) {
+	ads,err:=aa.GetDnsServerAddress()
+	if err != nil {
+		return nil,err
+	}
+
+	res:=make([]net.IPAddr,0,len(ads))
+	for _,v:=range ads{
+		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+		if err != nil {
+			return nil,err
+		}
+		res=append(res,ipAddr)
+	}
+	return res,nil
+}
+
+func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAddress, error) {
+	tz := aa.Length
+	fz := unsafe.Offsetof(aa.FirstUnicastAddress) + unsafe.Sizeof(aa.FirstUnicastAddress)
+
+	// 判断结构是否包含了指定的字段
+	// 不同版本的 windows 包含的字段不同，老版本的不包含新版本的字段。
+	if tz < uint32(fz) {
+		return nil, fmt.Errorf("Length(%v)<%v", tz, fz)
+	}
+
+	res := make([]*windows.IpAdapterUnicastAddress, 0, 1)
+
+	for v:=aa.FirstUnicastAddress;v!=nil;v=v.Next{
+		res=append(res,v)
+	}
+
+	return res, nil
+}
+func (aa *IpAdapterAddresses) GetUnicastIpAddress() ([]net.IPAddr, error) {
+	ads,err:=aa.GetUnicastAddress()
+	if err != nil {
+		return nil,err
+	}
+
+	res:=make([]net.IPAddr,0,len(ads))
+	for _,v:=range ads{
+		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+		if err != nil {
+			return nil,err
+		}
+		res=append(res,ipAddr)
+	}
+	return res,nil
 }
 
 // https://docs.microsoft.com/en-us/windows/desktop/api/iphlpapi/nf-iphlpapi-getadaptersaddresses
