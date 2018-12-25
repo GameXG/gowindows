@@ -8,6 +8,7 @@ var (
 	ws2_32            = windows.NewLazyDLL("Ws2_32.dll")
 	wSACreateEvent   = ws2_32.NewProc("WSACreateEvent")
 	wSACloseEvent      = ws2_32.NewProc("WSACloseEvent")
+	wSAResetEvent = ws2_32.NewProc("WSAResetEvent")
 )
 
 
@@ -36,6 +37,23 @@ func WSACreateEvent()(WSAEvent,error){
 // https://docs.microsoft.com/zh-cn/windows/desktop/api/winsock2/nf-winsock2-wsacloseevent
 func WSACloseEvent(event WSAEvent)error{
 	r1,_,e1:=wSACloseEvent.Call(uintptr(event))
+	if r1==0{
+		if e1 != ERROR_SUCCESS {
+			return e1
+		} else {
+			return newCallError(DWord(r1))
+		}
+	}else{
+		return nil
+	}
+}
+
+//BOOL WSAAPI WSAResetEvent(
+//  WSAEVENT hEvent
+//);
+// https://docs.microsoft.com/zh-cn/windows/desktop/api/winsock2/nf-winsock2-wsaresetevent
+func WSAResetEvent(event WSAEvent)error{
+	r1,_,e1:=wSAResetEvent.Call(uintptr(event))
 	if r1==0{
 		if e1 != ERROR_SUCCESS {
 			return e1
