@@ -42,7 +42,7 @@ func TestFwpmGetAppIdFromFileName0AndFree(t *testing.T) {
 
 func TestFwpmGetAppIdFromFileName0AndFree2(t *testing.T) {
 	var appId *FwpByteBlob
-	err := FwpmGetAppIdFromFileName0("c:\\aaaaaaa.exe", &appId)
+	err := FwpmGetAppIdFromFileName0("C:\\aaaaaaa.exe", &appId)
 	if err == nil {
 		t.Fatal("==nil")
 	}
