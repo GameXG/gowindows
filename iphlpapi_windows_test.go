@@ -392,8 +392,11 @@ func TestCancelIPChangeNotify(t *testing.T) {
 
 	t.Log("TestNotifyRouteChangeASync ok")
 }
+
 /*
 func TestIPChangeNotify_Reset(t *testing.T) {
+
+	f:=func(name string){
 	n:=IPChangeNotify{}
 
 	err:=n.Reset(true,true)
@@ -405,8 +408,8 @@ func TestIPChangeNotify_Reset(t *testing.T) {
 	// 10 秒后取消
 	go func(){
 		time.Sleep(20*time.Second)
-			t.Log(time.Now(), " close")
-err:=n.Close()
+		t.Log(time.Now(), " [",name,"] close")
+		err:=n.Close()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -416,15 +419,29 @@ err:=n.Close()
 	for {
 		select {
 		case v:=<-n.C:
-			t.Logf("%v %#v\r\n",time.Now(),v)
+			t.Logf("%v [%v] %#v\r\n",time.Now(),name,v)
 			case <-n.Done():
 				return
 		}
 	}
+	}
+
+	go f("1")
+	go f("2")
+
+	time.Sleep(20*time.Second)
 }*/
 
 /*
-断开 wifi + 重新连接 wifi 时的消息
+wifi 断开
+    iphlpapi_windows_test.go:421: 2018-12-31 21:29:27.3559343 +0800 CST m=+3.445919201 [2] &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:421: 2018-12-31 21:29:27.3739352 +0800 CST m=+3.463920101 [1] &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:410: 2018-12-31 21:29:44.9400476 +0800 CST m=+21.030032501  [ 2 ] close
+    iphlpapi_windows_test.go:410: 2018-12-31 21:29:44.9400476 +0800 CST m=+21.030032501  [ 1 ] close
+*/
+
+/*
+单个断开 wifi + 重新连接 wifi 时的消息
 
 
     iphlpapi_windows_test.go:419: 2018-12-25 16:02:23.7224344 +0800 CST m=+4.436488501 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
