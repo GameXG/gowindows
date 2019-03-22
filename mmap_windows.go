@@ -69,7 +69,7 @@ func CreateMmapWithSecurityDescriptor(name string, size uint32, write bool, secu
 		return nil, fmt.Errorf("MapViewOfFile, %v", err)
 	}
 
-	m := &Mmap{fileHandle: Handle(fileHandle), addr:addr, size: int(size)}
+	m := &Mmap{fileHandle: Handle(fileHandle), addr: addr, size: int(size)}
 
 	runtime.SetFinalizer(m, (*Mmap).Close)
 

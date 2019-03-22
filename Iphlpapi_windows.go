@@ -214,26 +214,26 @@ func (aa *IpAdapterAddresses) GetGatewayAddress() ([]*IpAdapterGatewayAddress, e
 }
 
 func (aa *IpAdapterAddresses) GetGatewayIpAddress() ([]net.IPAddr, error) {
-	ads,err:=aa.GetGatewayAddress()
+	ads, err := aa.GetGatewayAddress()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	res:=make([]net.IPAddr,0,len(ads))
-	for _,v:=range ads{
-		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+	res := make([]net.IPAddr, 0, len(ads))
+	for _, v := range ads {
+		ipAddr, err := Sockaddr2IpAddr(v.Address.Sockaddr)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		res=append(res,ipAddr)
+		res = append(res, ipAddr)
 	}
-	return res,nil
+	return res, nil
 }
 
-func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny)(net.IPAddr,error) {
-	sa,err:=rd.Sockaddr()
+func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny) (net.IPAddr, error) {
+	sa, err := rd.Sockaddr()
 	if err != nil {
-		return net.IPAddr{},err
+		return net.IPAddr{}, err
 	}
 
 	switch sa := sa.(type) {
@@ -258,27 +258,27 @@ func (aa *IpAdapterAddresses) GetDnsServerAddress() ([]*windows.IpAdapterDnsServ
 
 	res := make([]*windows.IpAdapterDnsServerAdapter, 0, 1)
 
-	for v:=aa.FirstDnsServerAddress;v!=nil;v=v.Next{
-		res=append(res,v)
+	for v := aa.FirstDnsServerAddress; v != nil; v = v.Next {
+		res = append(res, v)
 	}
 
 	return res, nil
 }
 func (aa *IpAdapterAddresses) GetDnsServerIpAddress() ([]net.IPAddr, error) {
-	ads,err:=aa.GetDnsServerAddress()
+	ads, err := aa.GetDnsServerAddress()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	res:=make([]net.IPAddr,0,len(ads))
-	for _,v:=range ads{
-		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+	res := make([]net.IPAddr, 0, len(ads))
+	for _, v := range ads {
+		ipAddr, err := Sockaddr2IpAddr(v.Address.Sockaddr)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		res=append(res,ipAddr)
+		res = append(res, ipAddr)
 	}
-	return res,nil
+	return res, nil
 }
 
 func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAddress, error) {
@@ -293,27 +293,27 @@ func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAd
 
 	res := make([]*windows.IpAdapterUnicastAddress, 0, 1)
 
-	for v:=aa.FirstUnicastAddress;v!=nil;v=v.Next{
-		res=append(res,v)
+	for v := aa.FirstUnicastAddress; v != nil; v = v.Next {
+		res = append(res, v)
 	}
 
 	return res, nil
 }
 func (aa *IpAdapterAddresses) GetUnicastIpAddress() ([]net.IPAddr, error) {
-	ads,err:=aa.GetUnicastAddress()
+	ads, err := aa.GetUnicastAddress()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	res:=make([]net.IPAddr,0,len(ads))
-	for _,v:=range ads{
-		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+	res := make([]net.IPAddr, 0, len(ads))
+	for _, v := range ads {
+		ipAddr, err := Sockaddr2IpAddr(v.Address.Sockaddr)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		res=append(res,ipAddr)
+		res = append(res, ipAddr)
 	}
-	return res,nil
+	return res, nil
 }
 
 // https://docs.microsoft.com/en-us/windows/desktop/api/iphlpapi/nf-iphlpapi-getadaptersaddresses
@@ -454,14 +454,13 @@ func NotifyRouteChange(handle *Handle, overlapped *Overlapped) error {
 	}
 }
 
-
 // BOOL CancelIPChangeNotify(
 //  LPOVERLAPPED notifyOverlapped
 //);
 // https://docs.microsoft.com/zh-cn/windows/desktop/api/iphlpapi/nf-iphlpapi-cancelipchangenotify
 // 返回值：
 //		bool 	如果当前没有 NotifyAddrChange 或 NotifyRouteChange 调用或 overlapped 无效，返回 false
-func CancelIPChangeNotify(overlapped *Overlapped)(bool, error) {
+func CancelIPChangeNotify(overlapped *Overlapped) (bool, error) {
 	r1, _, _ := cancelIPChangeNotify.Call(uintptr(unsafe.Pointer(overlapped)))
 	if r1 == 0 {
 		return false, nil
@@ -469,8 +468,6 @@ func CancelIPChangeNotify(overlapped *Overlapped)(bool, error) {
 		return true, nil
 	}
 }
-
-
 
 type IPChangeNotify struct {
 	rwm          sync.RWMutex
@@ -482,7 +479,7 @@ type IPChangeNotify struct {
 	routeOverlap *Overlapped
 	//addrHand     Handle // 指向HANDLE变量的指针，该变量接收在异步通知中使用的句柄。
 	//routeHand    Handle // 指向HANDLE变量的指针，该变量接收在异步通知中使用的句柄。
-	C            chan *IPChangeNotifyChanData
+	C chan *IPChangeNotifyChanData
 }
 
 type IPChangeNotifyChanData struct {
@@ -491,74 +488,74 @@ type IPChangeNotifyChanData struct {
 	IsRoute bool
 }
 
-func (n*IPChangeNotify)close()error{
-	if n.ctx!=nil{
+func (n *IPChangeNotify) close() error {
+	if n.ctx != nil {
 		select {
 		case <-n.ctx.Done():
 			break
 		default:
-			if f:=n.ctxCancel;f!=nil{
+			if f := n.ctxCancel; f != nil {
 				f()
 			}
 		}
 	}
 
-	if overlap:=n.routeOverlap;overlap!=nil{
+	if overlap := n.routeOverlap; overlap != nil {
 		CancelIPChangeNotify(overlap)
 		WSACloseEvent(WSAEvent(overlap.HEvent))
 	}
 
-	if overlap:=n.addrOverlap;overlap!=nil{
+	if overlap := n.addrOverlap; overlap != nil {
 		CancelIPChangeNotify(overlap)
 		WSACloseEvent(WSAEvent(overlap.HEvent))
 	}
 
 	n.addrOverlap = &Overlapped{}
 	n.routeOverlap = &Overlapped{}
-	n.hasRoute=false
-	n.hasAddr=false
+	n.hasRoute = false
+	n.hasAddr = false
 	return nil
 }
 
-func(n*IPChangeNotify)Close()error{
+func (n *IPChangeNotify) Close() error {
 	n.rwm.Lock()
 	defer n.rwm.Unlock()
 
 	return n.close()
 }
 
-func NewIPChangeNotify(hasAddr,hasRoute bool)(*IPChangeNotify,error){
-	n:=new(IPChangeNotify)
-	err:=n.Reset(hasAddr,hasRoute)
+func NewIPChangeNotify(hasAddr, hasRoute bool) (*IPChangeNotify, error) {
+	n := new(IPChangeNotify)
+	err := n.Reset(hasAddr, hasRoute)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return n,nil
+	return n, nil
 }
 
-func (n*IPChangeNotify)Done() <-chan struct{}{
+func (n *IPChangeNotify) Done() <-chan struct{} {
 	n.rwm.RLock()
 	defer n.rwm.RUnlock()
 
-	if n.ctx==nil{
+	if n.ctx == nil {
 		return nil
 	}
 
 	return n.ctx.Done()
 }
 
-func (n*IPChangeNotify)Reset(hasAddr,hasRoute bool)(error) {
+func (n *IPChangeNotify) Reset(hasAddr, hasRoute bool) error {
 	n.rwm.Lock()
 	defer n.rwm.Unlock()
 
 	// 关闭可能存在的
 	n.close()
 
-	var c  chan *IPChangeNotifyChanData
-	if n.C ==nil{
-		c=make(chan *IPChangeNotifyChanData,1)
+	var c chan *IPChangeNotifyChanData
+	if n.C == nil {
+		c = make(chan *IPChangeNotifyChanData, 1)
 		n.C = c
-	}else{
+	} else {
 		c = n.C
 	}
 
@@ -594,17 +591,17 @@ func (n*IPChangeNotify)Reset(hasAddr,hasRoute bool)(error) {
 
 	if hasAddr {
 		overlap := n.addrOverlap
-		go waitForSingleObjectLoop(ctx, ctxCancel,NotifyAddrChange, IPChangeNotifyChanData{IsAddr: true},c,overlap)
+		go waitForSingleObjectLoop(ctx, ctxCancel, NotifyAddrChange, IPChangeNotifyChanData{IsAddr: true}, c, overlap)
 	}
 	if hasRoute {
 		overlap := n.routeOverlap
-		go waitForSingleObjectLoop(ctx, ctxCancel,NotifyRouteChange, IPChangeNotifyChanData{IsRoute: true},c,overlap)
+		go waitForSingleObjectLoop(ctx, ctxCancel, NotifyRouteChange, IPChangeNotifyChanData{IsRoute: true}, c, overlap)
 	}
 
 	return nil
 }
 
-func waitForSingleObjectLoop(ctx context.Context,ctxCancel func(),f func(handle *Handle, overlapped *Overlapped) error ,data IPChangeNotifyChanData, c chan * IPChangeNotifyChanData,overlap*Overlapped) {
+func waitForSingleObjectLoop(ctx context.Context, ctxCancel func(), f func(handle *Handle, overlapped *Overlapped) error, data IPChangeNotifyChanData, c chan *IPChangeNotifyChanData, overlap *Overlapped) {
 	defer ctxCancel()
 
 	for {
