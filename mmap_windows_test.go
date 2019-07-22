@@ -2,7 +2,10 @@ package gowindows
 
 import (
 	"bytes"
+	"math/rand"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestAll(t *testing.T) {
@@ -45,6 +48,52 @@ func TestAll(t *testing.T) {
 		runtime.GC()
 		time.Sleep(1 * time.Second)
 	}*/
+}
+
+// 连续测试创建+关闭
+func TestCreateMmapAndOpenAndClose(t *testing.T) {
+	const name = "name111111"
+	m1, err := CreateMmap(name, 4096, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m1.Close()
+
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			var m *Mmap
+			var err error
+
+			time.Sleep(time.Duration(rand.Int31n(1000)) * time.Millisecond)
+
+			if rand.Int31n(2) == 1 {
+				m, err = CreateMmap(name, 4096, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				m, err = OpenMmap(name, 4096, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			time.Sleep(time.Duration(rand.Int31n(1000)) * time.Millisecond)
+
+			err = m.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 func TestCreateMmapWithSecurityDescriptor(t *testing.T) {
