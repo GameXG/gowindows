@@ -3,6 +3,7 @@ package gowindows
 import (
 	"context"
 	"net"
+	"strconv"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -22,6 +23,32 @@ var (
 	notifyAddrChange     = iphlpapi.NewProc("NotifyAddrChange")
 	notifyRouteChange    = iphlpapi.NewProc("NotifyRouteChange")
 	cancelIPChangeNotify = iphlpapi.NewProc("CancelIPChangeNotify")
+)
+
+// https://docs.microsoft.com/zh-cn/windows/desktop/api/iptypes/ns-iptypes-_ip_adapter_addresses_lh
+type IfOperStatus uint32
+
+const (
+	//接口已启动并且能够传递数据包。
+	IfOperStatusUp IfOperStatus = 1
+
+	//接口已关闭，并且不处于传递数据包的状态。该 IfOperStatusDown状态有两个含义，这取决于的值 AdminStatus构件。如果AdminStatus未设置为 NET_IF_ADMIN_STATUS_DOWN且ifOperStatus设置为 IfOperStatusDown，则假定接口上存在故障条件。如果 AdminStatus设置为IfOperStatusDown，那么 ifOperStatus通常也会设置为 IfOperStatusDown或IfOperStatusNotPresent 并且接口上不一定存在故障情况。
+	IfOperStatusDown IfOperStatus = 2
+
+	//接口处于测试模式。
+	IfOperStatusTesting IfOperStatus = 3
+
+	//接口的运行状态未知。
+	IfOperStatusUnknown IfOperStatus = 4
+
+	//接口实际上并不处于传递数据包的状态（它没有启动），而是处于挂起状态，等待一些外部事件。对于按需接口，此新状态标识接口正在等待事件将其置于IfOperStatusUp状态的情况。
+	IfOperStatusDormant IfOperStatus = 5
+
+	//IfOperStatusDown状态的 细化，指示相关接口是特定关闭的，因为托管系统中不存在某些组件（通常是硬件组件）。
+	IfOperStatusNotPresent IfOperStatus = 6
+
+	//IfOperStatusDown状态的 细化。此新状态表示此接口在一个或多个其他接口之上运行，并且此接口已关闭，因为这些较低层接口中的一个或多个已关闭。
+	IfOperStatusLowerLayerDown IfOperStatus = 7
 )
 
 // IP_ADAPTER_ADDRESSES_LH
@@ -104,7 +131,7 @@ type IpAdapterAddresses struct {
 	Flags                 uint32
 	Mtu                   uint32
 	IfType                uint32
-	OperStatus            uint32
+	OperStatus            IfOperStatus
 
 	// 以下是 windows xp sp1 之后添加的
 	ipv6IfIndex uint32
@@ -158,6 +185,11 @@ type IpAdapterGatewayAddress struct {
 	Address  windows.SocketAddress
 }
 
+// 一个字符数组，包含与地址关联的适配器的名称。与适配器的友好名称不同，AdapterName中指定的适配器名称是永久性的，用户无法修改。
+func (aa *IpAdapterAddresses) GetAdapterName() string {
+	// C:/Go/src/net/interface_windows.go:77
+	return string((*(*[10000]byte)(unsafe.Pointer(aa.AdapterName)))[:])
+}
 func (aa *IpAdapterAddresses) GetLuid() (IfLuid, error) {
 	tz := aa.Length
 	fz := unsafe.Offsetof(aa.luid) + unsafe.Sizeof(aa.luid)
@@ -169,6 +201,21 @@ func (aa *IpAdapterAddresses) GetLuid() (IfLuid, error) {
 	}
 
 	return aa.luid, nil
+}
+
+// 适配器的接收链路的当前速度（以每秒位数为单位）。
+// 注意   此结构成员仅适用于Windows Vista及更高版本。
+func (aa *IpAdapterAddresses) GetReceiveLinkSpeed() (uint64, error) {
+	tz := aa.Length
+	fz := unsafe.Offsetof(aa.receiveLinkSpeed) + unsafe.Sizeof(aa.receiveLinkSpeed)
+
+	// 判断结构是否包含了指定的字段
+	// 不同版本的 windows 包含的字段不同，老版本的不包含新版本的字段。
+	if tz < uint32(fz) {
+		return 0, fmt.Errorf("Length(%v)<%v", tz, fz)
+	}
+
+	return aa.receiveLinkSpeed, nil
 }
 func (aa *IpAdapterAddresses) GetNetworkGuid() (NetworkGuid, error) {
 	tz := aa.Length
@@ -246,6 +293,25 @@ func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny) (net.IPAddr, error) {
 	}
 }
 
+func UnicastIpAddress2IpNet(ua *windows.IpAdapterUnicastAddress) (net.IPNet, error) {
+	rd := ua.Address.Sockaddr
+	sa, err := rd.Sockaddr()
+	if err != nil {
+		return net.IPNet{}, err
+	}
+
+	switch sa := sa.(type) {
+	case *syscall.SockaddrInet4:
+		return net.IPNet{IP: net.IPv4(sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3]), Mask: net.CIDRMask(int(ua.OnLinkPrefixLength), 8*net.IPv4len)}, nil
+	case *syscall.SockaddrInet6:
+		ipNet := net.IPNet{IP: make(net.IP, net.IPv6len), Mask: net.CIDRMask(int(ua.OnLinkPrefixLength), 8*net.IPv4len)}
+		copy(ipNet.IP, sa.Addr[:])
+		return ipNet, nil
+	default:
+		return net.IPNet{}, fmt.Errorf("不支持的地址类型，%v", sa)
+	}
+}
+
 func (aa *IpAdapterAddresses) GetDnsServerAddress() ([]*windows.IpAdapterDnsServerAdapter, error) {
 	tz := aa.Length
 	fz := unsafe.Offsetof(aa.FirstDnsServerAddress) + unsafe.Sizeof(aa.FirstDnsServerAddress)
@@ -299,19 +365,19 @@ func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAd
 
 	return res, nil
 }
-func (aa *IpAdapterAddresses) GetUnicastIpAddress() ([]net.IPAddr, error) {
+func (aa *IpAdapterAddresses) GetUnicastIpAddress() ([]net.IPNet, error) {
 	ads, err := aa.GetUnicastAddress()
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]net.IPAddr, 0, len(ads))
+	res := make([]net.IPNet, 0, len(ads))
 	for _, v := range ads {
-		ipAddr, err := Sockaddr2IpAddr(v.Address.Sockaddr)
+		ipNet, err := UnicastIpAddress2IpNet(v)
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, ipAddr)
+		res = append(res, ipNet)
 	}
 	return res, nil
 }
@@ -336,6 +402,7 @@ func AdapterAddresses() ([]*IpAdapterAddresses, error) {
 			return nil, os.NewSyscallError("getadaptersaddresses", err)
 		}
 	}
+	//todo 需要确认是否存在内存释放问题，虽然标准库也是这样做的。
 	var aas []*IpAdapterAddresses
 	for aa := (*IpAdapterAddresses)(unsafe.Pointer(&b[0])); aa != nil; aa = aa.Next {
 		aas = append(aas, aa)
@@ -551,12 +618,10 @@ func (n *IPChangeNotify) Reset(hasAddr, hasRoute bool) error {
 	// 关闭可能存在的
 	n.close()
 
-	var c chan *IPChangeNotifyChanData
-	if n.C == nil {
+	c := n.C
+	if c == nil {
 		c = make(chan *IPChangeNotifyChanData, 1)
 		n.C = c
-	} else {
-		c = n.C
 	}
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
@@ -650,5 +715,26 @@ func waitForSingleObjectLoop(ctx context.Context, ctxCancel func(), f func(handl
 		if lData.Err != nil {
 			return
 		}
+	}
+}
+
+func (s IfOperStatus) String() string {
+	switch s {
+	case IfOperStatusUp:
+		return "Up"
+	case IfOperStatusDown:
+		return "Down"
+	case IfOperStatusTesting:
+		return "Testing"
+	case IfOperStatusUnknown:
+		return "Unknown"
+	case IfOperStatusDormant:
+		return "Dormant"
+	case IfOperStatusNotPresent:
+		return "NotPresent"
+	case IfOperStatusLowerLayerDown:
+		return "LowerLayerDown"
+	default:
+		return strconv.FormatUint((uint64)(s), 10)
 	}
 }
