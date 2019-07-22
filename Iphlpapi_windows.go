@@ -1,9 +1,10 @@
 package gowindows
 
 import (
+	"context"
 	"net"
+	"sync"
 	"syscall"
-
 	"unsafe"
 
 	"os"
@@ -20,6 +21,7 @@ var (
 	deleteIpForwardEntry = iphlpapi.NewProc("DeleteIpForwardEntry")
 	notifyAddrChange     = iphlpapi.NewProc("NotifyAddrChange")
 	notifyRouteChange    = iphlpapi.NewProc("NotifyRouteChange")
+	cancelIPChangeNotify = iphlpapi.NewProc("CancelIPChangeNotify")
 )
 
 // IP_ADAPTER_ADDRESSES_LH
@@ -449,5 +451,204 @@ func NotifyRouteChange(handle *Handle, overlapped *Overlapped) error {
 		return e1
 	} else {
 		return fmt.Errorf("r1:%v", r1)
+	}
+}
+
+// BOOL CancelIPChangeNotify(
+//  LPOVERLAPPED notifyOverlapped
+//);
+// https://docs.microsoft.com/zh-cn/windows/desktop/api/iphlpapi/nf-iphlpapi-cancelipchangenotify
+// 返回值：
+//		bool 	如果当前没有 NotifyAddrChange 或 NotifyRouteChange 调用或 overlapped 无效，返回 false
+func CancelIPChangeNotify(overlapped *Overlapped) (bool, error) {
+	r1, _, _ := cancelIPChangeNotify.Call(uintptr(unsafe.Pointer(overlapped)))
+	if r1 == 0 {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
+
+type IPChangeNotify struct {
+	rwm          sync.RWMutex
+	ctx          context.Context
+	ctxCancel    func()
+	hasAddr      bool
+	hasRoute     bool
+	addrOverlap  *Overlapped
+	routeOverlap *Overlapped
+	//addrHand     Handle // 指向HANDLE变量的指针，该变量接收在异步通知中使用的句柄。
+	//routeHand    Handle // 指向HANDLE变量的指针，该变量接收在异步通知中使用的句柄。
+	C chan *IPChangeNotifyChanData
+}
+
+type IPChangeNotifyChanData struct {
+	Err     error
+	IsAddr  bool
+	IsRoute bool
+}
+
+func (n *IPChangeNotify) close() error {
+	if n.ctx != nil {
+		select {
+		case <-n.ctx.Done():
+			break
+		default:
+			if f := n.ctxCancel; f != nil {
+				f()
+			}
+		}
+	}
+
+	if overlap := n.routeOverlap; overlap != nil {
+		CancelIPChangeNotify(overlap)
+		WSACloseEvent(WSAEvent(overlap.HEvent))
+	}
+
+	if overlap := n.addrOverlap; overlap != nil {
+		CancelIPChangeNotify(overlap)
+		WSACloseEvent(WSAEvent(overlap.HEvent))
+	}
+
+	n.addrOverlap = &Overlapped{}
+	n.routeOverlap = &Overlapped{}
+	n.hasRoute = false
+	n.hasAddr = false
+	return nil
+}
+
+func (n *IPChangeNotify) Close() error {
+	n.rwm.Lock()
+	defer n.rwm.Unlock()
+
+	return n.close()
+}
+
+func NewIPChangeNotify(hasAddr, hasRoute bool) (*IPChangeNotify, error) {
+	n := new(IPChangeNotify)
+	err := n.Reset(hasAddr, hasRoute)
+	if err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
+func (n *IPChangeNotify) Done() <-chan struct{} {
+	n.rwm.RLock()
+	defer n.rwm.RUnlock()
+
+	if n.ctx == nil {
+		return nil
+	}
+
+	return n.ctx.Done()
+}
+
+func (n *IPChangeNotify) Reset(hasAddr, hasRoute bool) error {
+	n.rwm.Lock()
+	defer n.rwm.Unlock()
+
+	// 关闭可能存在的
+	n.close()
+
+	var c chan *IPChangeNotifyChanData
+	if n.C == nil {
+		c = make(chan *IPChangeNotifyChanData, 1)
+		n.C = c
+	} else {
+		c = n.C
+	}
+
+	ctx, ctxCancel := context.WithCancel(context.Background())
+
+	n.ctx = ctx
+	n.ctxCancel = ctxCancel
+
+	cancel := false
+	defer func() {
+		if cancel {
+			n.close()
+		}
+	}()
+
+	if hasAddr {
+		hEvent, err := WSACreateEvent()
+		if err != nil {
+			cancel = true
+			return err
+		}
+		n.addrOverlap.HEvent = windows.Handle(hEvent)
+	}
+
+	if hasRoute {
+		hEvent, err := WSACreateEvent()
+		if err != nil {
+			cancel = true
+			return err
+		}
+		n.routeOverlap.HEvent = windows.Handle(hEvent)
+	}
+
+	if hasAddr {
+		overlap := n.addrOverlap
+		go waitForSingleObjectLoop(ctx, ctxCancel, NotifyAddrChange, IPChangeNotifyChanData{IsAddr: true}, c, overlap)
+	}
+	if hasRoute {
+		overlap := n.routeOverlap
+		go waitForSingleObjectLoop(ctx, ctxCancel, NotifyRouteChange, IPChangeNotifyChanData{IsRoute: true}, c, overlap)
+	}
+
+	return nil
+}
+
+func waitForSingleObjectLoop(ctx context.Context, ctxCancel func(), f func(handle *Handle, overlapped *Overlapped) error, data IPChangeNotifyChanData, c chan *IPChangeNotifyChanData, overlap *Overlapped) {
+	defer ctxCancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		lData := data
+
+		hand := Handle(0)
+		err := f(&hand, overlap)
+		if err != nil {
+			lData.Err = err
+			select {
+			case <-ctx.Done():
+			default:
+				select {
+				case c <- &lData:
+					return
+				case <-ctx.Done():
+				}
+			}
+		}
+
+		event, err := WaitForSingleObject(overlap.HEvent, INFINITE)
+		if err != nil {
+			lData.Err = err
+		}
+
+		if event != WAIT_OBJECT_0 {
+			lData.Err = fmt.Errorf("event = %v", event)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			select {
+			case c <- &lData:
+			case <-ctx.Done():
+			}
+		}
+
+		if lData.Err != nil {
+			return
+		}
 	}
 }

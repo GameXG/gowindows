@@ -2,6 +2,7 @@ package gowindows
 
 import (
 	"testing"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -342,4 +343,143 @@ func TestNotifyRouteChangeASync(t *testing.T) {
 
 	t.Log("TestNotifyRouteChangeASync ok")
 }
+*/
+
+// 手工wifi切换网络测试通过
+func TestCancelIPChangeNotify(t *testing.T) {
+	t.Log("TestCancelIPChangeNotify...")
+
+	overlap := Overlapped{}
+	hEvent, err := WSACreateEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	overlap.HEvent = windows.Handle(hEvent)
+
+	hand := Handle(0)
+
+	err = NotifyRouteChange(&hand, &overlap)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		r1, err := CancelIPChangeNotify(&overlap)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if r1 != true {
+			t.Errorf("r1!=true")
+		}
+	}()
+
+	event, err := WaitForSingleObject(overlap.HEvent, INFINITE)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 取消时值也是 WAIT_OBJECT_0
+	if event != WAIT_OBJECT_0 {
+		t.Fatal(event, " != WAIT_OBJECT_0")
+	}
+
+	t.Log("TestNotifyRouteChangeASync ok")
+}
+
+/*
+func TestIPChangeNotify_Reset(t *testing.T) {
+
+	f:=func(name string){
+	n:=IPChangeNotify{}
+
+	err:=n.Reset(true,true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+
+	// 10 秒后取消
+	go func(){
+		time.Sleep(20*time.Second)
+		t.Log(time.Now(), " [",name,"] close")
+		err:=n.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	// 接收更改
+	for {
+		select {
+		case v:=<-n.C:
+			t.Logf("%v [%v] %#v\r\n",time.Now(),name,v)
+			case <-n.Done():
+				return
+		}
+	}
+	}
+
+	go f("1")
+	go f("2")
+
+	time.Sleep(20*time.Second)
+}*/
+
+/*
+wifi 断开
+    iphlpapi_windows_test.go:421: 2018-12-31 21:29:27.3559343 +0800 CST m=+3.445919201 [2] &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:421: 2018-12-31 21:29:27.3739352 +0800 CST m=+3.463920101 [1] &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:410: 2018-12-31 21:29:44.9400476 +0800 CST m=+21.030032501  [ 2 ] close
+    iphlpapi_windows_test.go:410: 2018-12-31 21:29:44.9400476 +0800 CST m=+21.030032501  [ 1 ] close
+*/
+
+/*
+单个断开 wifi + 重新连接 wifi 时的消息
+
+
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:23.7224344 +0800 CST m=+4.436488501 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:23.7734356 +0800 CST m=+4.487489701 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:23.8034356 +0800 CST m=+4.517489701 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:23.8194343 +0800 CST m=+4.533488401 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:23.9044358 +0800 CST m=+4.618489901 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:23.9044358 +0800 CST m=+4.618489901 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:26.6590696 +0800 CST m=+7.373123701 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:27.6715333 +0800 CST m=+8.385587401 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:27.6795325 +0800 CST m=+8.393586601 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:27.7855319 +0800 CST m=+8.499586001 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:27.7875314 +0800 CST m=+8.501585501 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:27.8055308 +0800 CST m=+8.519584901 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.2337128 +0800 CST m=+12.947766901 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.2757113 +0800 CST m=+12.989765401 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.2857124 +0800 CST m=+12.999766501 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.3257123 +0800 CST m=+13.039766401 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.372712 +0800 CST m=+13.086766101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.372712 +0800 CST m=+13.086766101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.4317122 +0800 CST m=+13.145766301 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:32.4317122 +0800 CST m=+13.145766301 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.7755426 +0800 CST m=+16.489596701 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.7845405 +0800 CST m=+16.498594601 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.809544 +0800 CST m=+16.523598101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.809544 +0800 CST m=+16.523598101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.809544 +0800 CST m=+16.523598101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.8305413 +0800 CST m=+16.544595401 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.8305413 +0800 CST m=+16.544595401 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.8735428 +0800 CST m=+16.587596901 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.9055429 +0800 CST m=+16.619597001 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.930545 +0800 CST m=+16.644599101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.930545 +0800 CST m=+16.644599101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:35.930545 +0800 CST m=+16.644599101 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:36.0365442 +0800 CST m=+16.750598301 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:36.0465464 +0800 CST m=+16.760600501 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:36.0785433 +0800 CST m=+16.792597401 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:39.1555427 +0800 CST m=+19.869596801 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:39.1615416 +0800 CST m=+19.875595701 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:39.1705432 +0800 CST m=+19.884597301 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:39.2375421 +0800 CST m=+19.951596201 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:39.3815429 +0800 CST m=+20.095597001 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:true, IsRoute:false}
+    iphlpapi_windows_test.go:419: 2018-12-25 16:02:39.3815429 +0800 CST m=+20.095597001 &gowindows.IPChangeNotifyChanData{Err:error(nil), IsAddr:false, IsRoute:true}
+    iphlpapi_windows_test.go:408: 2018-12-25 16:02:40.3450281 +0800 CST m=+21.059082201  close
+
 */
