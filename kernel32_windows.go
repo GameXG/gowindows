@@ -203,7 +203,14 @@ func CreateMutex(lpSecurityAttributes uintptr, bInitalOwner bool, name string) (
 	}
 	return
 }
-func OpenMutex(lpSecurityAttributes uintptr, bInitalOwner bool, name string) (handle Handle, err error) {
+
+// 打开现有的已命名互斥对象。
+// dwDesiredAccess	对互斥锁对象的访问。使用互斥锁只需要SYNCHRONIZE访问权限; 要更改互斥锁的安全性，请指定MUTEX_ALL_ACCESS。如果指定对象的安全描述符不允许对调用进程请求访问，则该函数将失败。有关访问权限的列表，请参阅 [同步对象安全性和访问权限](https://docs.microsoft.com/zh-cn/windows/win32/sync/synchronization-object-security-and-access-rights)。
+// bInitalOwner		如果此值为TRUE，则此进程创建的进程将继承该句柄。否则，进程不会继承此句柄。
+// name				要打开的互斥锁的名称。名称比较区分大小写。
+// https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-openmutexw
+// https://msdn.microsoft.com/en-us/windows/desktop/ms684315
+func OpenMutex(dwDesiredAccess DWord, bInitalOwner bool, name string) (handle Handle, err error) {
 	mutexName, err := syscall.UTF16PtrFromString(name)
 	if err != nil {
 		return 0, err
@@ -214,7 +221,7 @@ func OpenMutex(lpSecurityAttributes uintptr, bInitalOwner bool, name string) (ha
 	} else {
 		_p0 = 0
 	}
-	r0, _, e1 := syscall.Syscall(openMutexW.Addr(), 3, uintptr(lpSecurityAttributes), uintptr(_p0), uintptr(unsafe.Pointer(mutexName)))
+	r0, _, e1 := syscall.Syscall(openMutexW.Addr(), 3, uintptr(dwDesiredAccess), uintptr(_p0), uintptr(unsafe.Pointer(mutexName)))
 	handle = Handle(r0)
 	if handle == InvalidHandle {
 		if e1 != 0 {
@@ -246,6 +253,8 @@ func One(name string) (handle Handle, rerr error) {
 	}
 
 	event, err := syscall.WaitForSingleObject(Handle(h), 0)
+	// WAIT_OBJECT_0   	mutex 未被持有或安全释放
+	// WAIT_ABANDONED	上一持有 mutex 的线程或进程异常终止
 	if err == nil && (event == syscall.WAIT_OBJECT_0 || event == syscall.WAIT_ABANDONED) {
 		// 持有信号量成功
 		return h, nil
