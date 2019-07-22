@@ -51,6 +51,11 @@ func ReadProcessMemory(processHandle Handle, baseAddress uint,
 // PBOOL  Wow64Process
 // );
 func IsWow64Process(hProcess Handle) (bool, error) {
+	// 不存在 IsWow64Process 函数的操作系统绝对不是64位系统，那么不会是 wow64进程
+	if isWow64Process.Find() != nil {
+		return false, nil
+	}
+
 	is64 := 0
 
 	r1, _, err := isWow64Process.Call(uintptr(hProcess), uintptr(unsafe.Pointer(&is64)))
