@@ -2,9 +2,10 @@ package gowindows
 
 import (
 	"fmt"
-	"golang.org/x/sys/windows"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 
 	"reflect"
 )
@@ -15,7 +16,7 @@ const ERROR_SUCCESS syscall.Errno = 0
 
 const INVALID_HANDLE_VALUE Handle = Handle(^uintptr(0))
 
-const NO_ERROR =0
+const NO_ERROR = 0
 
 const ERROR_IO_PENDING = 997
 
@@ -65,7 +66,6 @@ type WCHAR = wchar_t
 type wchar_t = uint16
 
 type Overlapped = windows.Overlapped
-
 
 type CallError struct {
 	r1 DWord

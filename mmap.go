@@ -4,8 +4,8 @@ import "C"
 
 type Mmap struct {
 	fileHandle Handle
-	addr uintptr
-	size int
+	addr       uintptr
+	size       int
 }
 
 func (m *Mmap) GetHandle() Handle {
@@ -13,7 +13,7 @@ func (m *Mmap) GetHandle() Handle {
 }
 
 func (m *Mmap) GetBytes() []byte {
-	if m.size == 0 || m.addr == uintptr(0){
+	if m.size == 0 || m.addr == uintptr(0) {
 		return nil
 	}
 

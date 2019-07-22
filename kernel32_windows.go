@@ -409,5 +409,4 @@ func MultiByte2Str(codePage CodePage, dwFlags MultiByteToWideCharFlags, str []by
 	return string(utf16.Decode(utf16Data)), nil
 }
 
-
 var WaitForSingleObject = windows.WaitForSingleObject

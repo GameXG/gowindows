@@ -41,32 +41,31 @@ func TestAdapterAddresses(t *testing.T) {
 		// 奇怪输出的全部都是一个值:{A5735777-2F40-11E8-A039-806E6F6E6963}
 		t.Logf("guid:%v\r\n", guidStr)
 
-		uas,err:=aa.GetUnicastIpAddress()
+		uas, err := aa.GetUnicastIpAddress()
 		if err != nil {
-			t.Errorf("GetUnicastIpAddress,%v",err)
+			t.Errorf("GetUnicastIpAddress,%v", err)
 		}
-		for _,v:=range uas{
-			t.Logf("UnicastAddress:%v",v)
+		for _, v := range uas {
+			t.Logf("UnicastAddress:%v(%#v)", v.IP, v.IP)
 		}
-
 
 		gas, err := aa.GetGatewayIpAddress()
 		if err != nil {
 			t.Error(err)
 		}
-		for _,v:=range gas{
-			t.Logf("Gateway:%v",v)
+		for _, v := range gas {
+			t.Logf("Gateway:%v", v)
 		}
 
 		t.Logf("connectionType:%v\r\n", aa.connectionType)
 
-		dns,err:=aa.GetDnsServerIpAddress()
+		dns, err := aa.GetDnsServerIpAddress()
 		if err != nil {
 			t.Error(err)
 		}
 
-		for _,v:=range dns{
-			t.Logf("DNS:%v",v)
+		for _, v := range dns {
+			t.Logf("DNS:%v(%#v)", v, v)
 		}
 
 	}
@@ -260,7 +259,6 @@ func TestGetIpForwardTable(t *testing.T) {
 	//	t.Logf("%#v", rows)
 }
 
-
 /*
 // 手工wifi切换网络测试通过
 func TestNotifyAddrChangeSync(t *testing.T) {
@@ -283,7 +281,6 @@ func TestNotifyRouteChangeSync(t *testing.T) {
 	t.Log("TestNotifyRouteChangeSync ok")
 }
 */
-
 
 /*
 // 手工wifi切换网络测试通过

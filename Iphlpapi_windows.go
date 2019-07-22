@@ -212,26 +212,26 @@ func (aa *IpAdapterAddresses) GetGatewayAddress() ([]*IpAdapterGatewayAddress, e
 }
 
 func (aa *IpAdapterAddresses) GetGatewayIpAddress() ([]net.IPAddr, error) {
-	ads,err:=aa.GetGatewayAddress()
+	ads, err := aa.GetGatewayAddress()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	res:=make([]net.IPAddr,0,len(ads))
-	for _,v:=range ads{
-		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+	res := make([]net.IPAddr, 0, len(ads))
+	for _, v := range ads {
+		ipAddr, err := Sockaddr2IpAddr(v.Address.Sockaddr)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		res=append(res,ipAddr)
+		res = append(res, ipAddr)
 	}
-	return res,nil
+	return res, nil
 }
 
-func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny)(net.IPAddr,error) {
-	sa,err:=rd.Sockaddr()
+func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny) (net.IPAddr, error) {
+	sa, err := rd.Sockaddr()
 	if err != nil {
-		return net.IPAddr{},err
+		return net.IPAddr{}, err
 	}
 
 	switch sa := sa.(type) {
@@ -256,27 +256,27 @@ func (aa *IpAdapterAddresses) GetDnsServerAddress() ([]*windows.IpAdapterDnsServ
 
 	res := make([]*windows.IpAdapterDnsServerAdapter, 0, 1)
 
-	for v:=aa.FirstDnsServerAddress;v!=nil;v=v.Next{
-		res=append(res,v)
+	for v := aa.FirstDnsServerAddress; v != nil; v = v.Next {
+		res = append(res, v)
 	}
 
 	return res, nil
 }
 func (aa *IpAdapterAddresses) GetDnsServerIpAddress() ([]net.IPAddr, error) {
-	ads,err:=aa.GetDnsServerAddress()
+	ads, err := aa.GetDnsServerAddress()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	res:=make([]net.IPAddr,0,len(ads))
-	for _,v:=range ads{
-		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+	res := make([]net.IPAddr, 0, len(ads))
+	for _, v := range ads {
+		ipAddr, err := Sockaddr2IpAddr(v.Address.Sockaddr)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		res=append(res,ipAddr)
+		res = append(res, ipAddr)
 	}
-	return res,nil
+	return res, nil
 }
 
 func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAddress, error) {
@@ -291,27 +291,27 @@ func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAd
 
 	res := make([]*windows.IpAdapterUnicastAddress, 0, 1)
 
-	for v:=aa.FirstUnicastAddress;v!=nil;v=v.Next{
-		res=append(res,v)
+	for v := aa.FirstUnicastAddress; v != nil; v = v.Next {
+		res = append(res, v)
 	}
 
 	return res, nil
 }
 func (aa *IpAdapterAddresses) GetUnicastIpAddress() ([]net.IPAddr, error) {
-	ads,err:=aa.GetUnicastAddress()
+	ads, err := aa.GetUnicastAddress()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	res:=make([]net.IPAddr,0,len(ads))
-	for _,v:=range ads{
-		ipAddr,err:=Sockaddr2IpAddr(v.Address.Sockaddr)
+	res := make([]net.IPAddr, 0, len(ads))
+	for _, v := range ads {
+		ipAddr, err := Sockaddr2IpAddr(v.Address.Sockaddr)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		res=append(res,ipAddr)
+		res = append(res, ipAddr)
 	}
-	return res,nil
+	return res, nil
 }
 
 // https://docs.microsoft.com/en-us/windows/desktop/api/iphlpapi/nf-iphlpapi-getadaptersaddresses
