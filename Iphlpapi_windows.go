@@ -260,6 +260,25 @@ func (aa *IpAdapterAddresses) GetGatewayAddress() ([]*IpAdapterGatewayAddress, e
 	return res, nil
 }
 
+func (aa *IpAdapterAddresses) GetHardwareAddr() (net.HardwareAddr, error) {
+	tz := aa.Length
+	fz := unsafe.Offsetof(aa.PhysicalAddressLength) + unsafe.Sizeof(aa.PhysicalAddressLength)
+
+	// 判断结构是否包含了指定的字段
+	// 不同版本的 windows 包含的字段不同，老版本的不包含新版本的字段。
+	if tz < uint32(fz) {
+		return nil, fmt.Errorf("Length(%v)<%v", tz, fz)
+	}
+
+	if aa.PhysicalAddressLength > 0 {
+		hardwareAddr := make([]byte, aa.PhysicalAddressLength)
+		copy(hardwareAddr, aa.PhysicalAddress[:])
+		return hardwareAddr, nil
+	}
+
+	return nil, fmt.Errorf("PhysicalAddressLength == 0")
+}
+
 func (aa *IpAdapterAddresses) GetGatewayIpAddress() ([]net.IPAddr, error) {
 	ads, err := aa.GetGatewayAddress()
 	if err != nil {
