@@ -2,29 +2,31 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/gamexg/gowindows"
 	"golang.org/x/sys/windows"
 )
+
 const FIREWALL_SUBLAYER_NAMEW = "aaa1"
-const FIREWALL_SERVICE_NAMEW ="aaa1.1"
+const FIREWALL_SERVICE_NAMEW = "aaa1.1"
 
 func main() {
-	err:=t(100,true)
+	err := t(100, true)
 	if err != nil {
 		panic(err)
 	}
 
-err=	t(300,false)
+	err = t(300, false)
 	if err != nil {
 		panic(err)
 	}
-fmt.Print("等待退出\r\n")
-var s string
-fmt.Scanln(&s)
+	fmt.Print("等待退出\r\n")
+	var s string
+	fmt.Scanln(&s)
 }
 
-func t(Weight uint16, block bool) error{
-	engineHandle:=gowindows.Handle(0)
+func t(Weight uint16, block bool) error {
+	engineHandle := gowindows.Handle(0)
 
 	session := gowindows.FwpmSession0{
 		Flags: gowindows.FWPM_SESSION_FLAG_DYNAMIC,
@@ -66,14 +68,13 @@ func t(Weight uint16, block bool) error{
 	condition[0].ConditionValue.Type = gowindows.FWP_UINT16
 	condition[0].ConditionValue.SetUint16(80)
 
-
 	// 拦截 IPv4 所有 DNS 请求
 	filter.LayerKey = gowindows.FWPM_LAYER_ALE_AUTH_CONNECT_V4
 	filter.Action.Type = gowindows.FWP_ACTION_BLOCK
 	filter.Weight.Type = gowindows.FWP_EMPTY
 	filter.NumFilterConditions = 1
 
-	if block==false{
+	if block == false {
 		filter.Action.Type = gowindows.FWP_ACTION_PERMIT
 	}
 
