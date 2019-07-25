@@ -311,7 +311,8 @@ func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny) (net.IPAddr, error) {
 		return net.IPAddr{}, fmt.Errorf("不支持的地址类型，%v", sa)
 	}
 }
-
+// 注意 windows xp  IpAdapterUnicastAddress 不包含 OnLinkPrefixLength 字段，即无法获取ip掩码。
+// 参考：https://docs.microsoft.com/en-us/windows/win32/api/iptypes/ns-iptypes-_ip_adapter_unicast_address_lh
 func UnicastIpAddress2IpNet(ua *windows.IpAdapterUnicastAddress) (net.IPNet, error) {
 	rd := ua.Address.Sockaddr
 	sa, err := rd.Sockaddr()
@@ -319,11 +320,22 @@ func UnicastIpAddress2IpNet(ua *windows.IpAdapterUnicastAddress) (net.IPNet, err
 		return net.IPNet{}, err
 	}
 
+	// windows xp 不存在 onLinkPrefixLength 字段
+	// 不过实测这里判断无效，因为 winxp 32/64 结构长度都是 48 ，比 ua.OnLinkPrefixLength 长度 45 大。
+	// 使用未定义行为并不是一个好主意，所以还是保留了这个部分判断。
+	// https://docs.microsoft.com/en-us/windows/win32/api/iptypes/ns-iptypes-_ip_adapter_unicast_address_lh
+	onLinkPrefixLength := 0
+	tz := ua.Length
+	fz := unsafe.Offsetof(ua.OnLinkPrefixLength) + unsafe.Sizeof(ua.OnLinkPrefixLength)
+	if tz >= uint32(fz) {
+		onLinkPrefixLength = int(ua.OnLinkPrefixLength)
+	}
+
 	switch sa := sa.(type) {
 	case *syscall.SockaddrInet4:
-		return net.IPNet{IP: net.IPv4(sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3]), Mask: net.CIDRMask(int(ua.OnLinkPrefixLength), 8*net.IPv4len)}, nil
+		return net.IPNet{IP: net.IPv4(sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3]), Mask: net.CIDRMask(onLinkPrefixLength, 8*net.IPv4len)}, nil
 	case *syscall.SockaddrInet6:
-		ipNet := net.IPNet{IP: make(net.IP, net.IPv6len), Mask: net.CIDRMask(int(ua.OnLinkPrefixLength), 8*net.IPv4len)}
+		ipNet := net.IPNet{IP: make(net.IP, net.IPv6len), Mask: net.CIDRMask(onLinkPrefixLength, 8*net.IPv4len)}
 		copy(ipNet.IP, sa.Addr[:])
 		return ipNet, nil
 	default:
@@ -366,6 +378,9 @@ func (aa *IpAdapterAddresses) GetDnsServerIpAddress() ([]net.IPAddr, error) {
 	return res, nil
 }
 
+// 获得单播地址列表
+// 注意 windows xp  IpAdapterUnicastAddress 不包含 OnLinkPrefixLength 字段，即无法获取ip掩码。
+// 参考：https://docs.microsoft.com/en-us/windows/win32/api/iptypes/ns-iptypes-_ip_adapter_unicast_address_lh
 func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAddress, error) {
 	tz := aa.Length
 	fz := unsafe.Offsetof(aa.FirstUnicastAddress) + unsafe.Sizeof(aa.FirstUnicastAddress)
@@ -384,6 +399,11 @@ func (aa *IpAdapterAddresses) GetUnicastAddress() ([]*windows.IpAdapterUnicastAd
 
 	return res, nil
 }
+
+// 获得单播地址列表
+// 注意 windows xp  IpAdapterUnicastAddress 不包含 OnLinkPrefixLength 字段，即无法获取ip掩码。
+// 所以 windows xp 下掩码将永远为0
+// 参考：https://docs.microsoft.com/en-us/windows/win32/api/iptypes/ns-iptypes-_ip_adapter_unicast_address_lh
 func (aa *IpAdapterAddresses) GetUnicastIpAddress() ([]net.IPNet, error) {
 	ads, err := aa.GetUnicastAddress()
 	if err != nil {
