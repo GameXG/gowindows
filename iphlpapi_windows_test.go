@@ -1,6 +1,7 @@
 package gowindows
 
 import (
+	"net"
 	"testing"
 	"time"
 	"unsafe"
@@ -74,6 +75,8 @@ func TestAdapterAddresses(t *testing.T) {
 
 func TestStruct(t *testing.T) {
 	if ptrSize == 8 {
+		t.Log("64")
+
 		if unsafe.Sizeof(IpAdapterAddresses{}) != 448 {
 			t.Errorf("IpAdapterAddresses %v!=448", unsafe.Sizeof(IpAdapterAddresses{}))
 		}
@@ -150,7 +153,29 @@ func TestStruct(t *testing.T) {
 		if unsafe.Sizeof(IpAdapterDnsSuffix{}) != 520 {
 			t.Errorf("IpAdapterDnsSuffix %v!=516", unsafe.Sizeof(IpAdapterDnsSuffix{}))
 		}
+
+		if unsafe.Sizeof(MibIpAddrTable{}) != 28 {
+			t.Errorf("MibIpAddrTable %v!=28", unsafe.Sizeof(MibIpAddrTable{}))
+		}
+		mibIpAddrTable := MibIpAddrTable{}
+		if o := unsafe.Offsetof(mibIpAddrTable.Table); o != 4 {
+			t.Errorf("%v !=4", o)
+		}
+
+		if unsafe.Sizeof(MibIpAddrRowW2k{}) != 24 {
+			t.Errorf("MibIpAddrRowW2k %v!=24", unsafe.Sizeof(MibIpAddrRowW2k{}))
+		}
+		mibIpAddrRowW2k := MibIpAddrRowW2k{}
+		if o := unsafe.Offsetof(mibIpAddrRowW2k.Mask); o != 8 {
+			t.Errorf("%v !=8", o)
+		}
+		if o := unsafe.Offsetof(mibIpAddrRowW2k.Unused2); o != 22 {
+			t.Errorf("%v !=22", o)
+		}
+
 	} else {
+		t.Log("32")
+
 		if unsafe.Sizeof(IpAdapterAddresses{}) != 376 {
 			t.Errorf("IpAdapterAddresses %v!=376", unsafe.Sizeof(IpAdapterAddresses{}))
 		}
@@ -243,6 +268,25 @@ func TestStruct(t *testing.T) {
 		}
 		if unsafe.Sizeof(IpAdapterDnsSuffix{}) != 516 {
 			t.Errorf("IpAdapterDnsSuffix %v!=516", unsafe.Sizeof(IpAdapterDnsSuffix{}))
+		}
+
+		if unsafe.Sizeof(MibIpAddrTable{}) != 28 {
+			t.Errorf("MibIpAddrTable %v!=28", unsafe.Sizeof(MibIpAddrTable{}))
+		}
+		mibIpAddrTable := MibIpAddrTable{}
+		if o := unsafe.Offsetof(mibIpAddrTable.Table); o != 4 {
+			t.Errorf("%v !=4", o)
+		}
+
+		if unsafe.Sizeof(MibIpAddrRowW2k{}) != 24 {
+			t.Errorf("MibIpAddrRowW2k %v!=24", unsafe.Sizeof(MibIpAddrRowW2k{}))
+		}
+		mibIpAddrRowW2k := MibIpAddrRowW2k{}
+		if o := unsafe.Offsetof(mibIpAddrRowW2k.Mask); o != 8 {
+			t.Errorf("%v !=8", o)
+		}
+		if o := unsafe.Offsetof(mibIpAddrRowW2k.Unused2); o != 22 {
+			t.Errorf("%v !=22", o)
 		}
 	}
 }
@@ -483,3 +527,41 @@ wifi 断开
     iphlpapi_windows_test.go:408: 2018-12-25 16:02:40.3450281 +0800 CST m=+21.059082201  close
 
 */
+
+func TestGetIpAddrTable(t *testing.T) {
+	rows, err := GetIpAddrTable(false)
+	if err != nil {
+		panic(err)
+	}
+
+	if len(rows) == 0 {
+		t.Error("len(rows)==0")
+	}
+
+	for _, v := range rows {
+		t.Logf("index:%v\r\n", v.Index)
+		t.Logf("ip:%v/%v\r\n", v.GetAddr(), v.GetMask())
+		t.Logf("BCastAddr:%v\r\n", v.GetBCastAddr())
+		t.Logf("ReasmSize:%v\r\n", v.ReasmSize)
+	}
+}
+
+func TestUint322Ip(t *testing.T) {
+	ip := net.IPv4(0x11, 0x22, 0x33, 0x44)
+
+	_int, err := ip2uint32(ip)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _int != 0x44332211 {
+		t.Errorf("%v!=0x44332211", _int)
+	}
+
+	ip2 := uint322Ip(_int)
+
+	if ip2.Equal(ip) == false {
+		t.Errorf("%v!=%v", ip2, ip)
+	}
+
+}

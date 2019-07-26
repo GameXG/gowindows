@@ -23,6 +23,7 @@ var (
 	notifyAddrChange     = iphlpapi.NewProc("NotifyAddrChange")
 	notifyRouteChange    = iphlpapi.NewProc("NotifyRouteChange")
 	cancelIPChangeNotify = iphlpapi.NewProc("CancelIPChangeNotify")
+	getIpAddrTable       = iphlpapi.NewProc("GetIpAddrTable")
 )
 
 // https://docs.microsoft.com/zh-cn/windows/desktop/api/iptypes/ns-iptypes-_ip_adapter_addresses_lh
@@ -185,6 +186,62 @@ type IpAdapterGatewayAddress struct {
 	Address  windows.SocketAddress
 }
 
+//typedef struct _MIB_IPADDRTABLE {
+//    DWORD dwNumEntries;
+//    MIB_IPADDRROW table[ANY_SIZE];
+//} MIB_IPADDRTABLE, *PMIB_IPADDRTABLE;
+// https://docs.microsoft.com/zh-cn/windows/win32/api/ipmib/ns-ipmib-_mib_ipaddrtable
+type MibIpAddrTable struct {
+	NumEntries DWord
+	Table      [ANY_SIZE]MibIpAddrRowW2k
+}
+
+// typedef struct _MIB_IPADDRROW_W2K {
+//    DWORD dwAddr;
+//    DWORD dwIndex;
+//    DWORD dwMask;
+//    DWORD dwBCastAddr;
+//    DWORD dwReasmSize;
+//    unsigned short Unused1;
+//    unsigned short Unused2;
+//} MIB_IPADDRROW_W2K, *PMIB_IPADDRROW_W2K;
+//https://docs.microsoft.com/zh-cn/windows/win32/api/ipmib/ns-ipmib-mib_ipaddrrow_w2k
+type MibIpAddrRowW2k struct {
+	Addr      DWord
+	Index     DWord
+	Mask      DWord
+	BCastAddr DWord
+	ReasmSize DWord
+	Unused1   uint16
+	Unused2   uint16
+}
+
+func (r *MibIpAddrRowW2k) GetAddr() net.IP {
+	return uint322Ip(r.Addr)
+}
+
+func (r *MibIpAddrRowW2k) GetMask() net.IP {
+	return uint322Ip(r.Mask)
+}
+
+func (r *MibIpAddrRowW2k) GetBCastAddr() net.IP {
+	return uint322Ip(r.BCastAddr)
+}
+
+func uint322Ip(ip uint32) net.IP {
+	return net.IPv4(byte(ip), byte(ip>>8), byte(ip>>16), byte(ip>>24))
+}
+
+func ip2uint32(ip net.IP) (uint32, error) {
+	_ip := ip.To4()
+
+	if len(_ip) == 4 {
+		return uint32(_ip[0]) | uint32(_ip[1])<<8 | uint32(_ip[2])<<16 | uint32(_ip[3])<<24, nil
+	}
+
+	return 0, fmt.Errorf("%v 不是 ipv6 格式。", ip)
+}
+
 // 一个字符数组，包含与地址关联的适配器的名称。与适配器的友好名称不同，AdapterName中指定的适配器名称是永久性的，用户无法修改。
 func (aa *IpAdapterAddresses) GetAdapterName() string {
 	// C:/Go/src/net/interface_windows.go:77
@@ -311,6 +368,7 @@ func Sockaddr2IpAddr(rd *syscall.RawSockaddrAny) (net.IPAddr, error) {
 		return net.IPAddr{}, fmt.Errorf("不支持的地址类型，%v", sa)
 	}
 }
+
 // 注意 windows xp  IpAdapterUnicastAddress 不包含 OnLinkPrefixLength 字段，即无法获取ip掩码。
 // 参考：https://docs.microsoft.com/en-us/windows/win32/api/iptypes/ns-iptypes-_ip_adapter_unicast_address_lh
 func UnicastIpAddress2IpNet(ua *windows.IpAdapterUnicastAddress) (net.IPNet, error) {
@@ -776,4 +834,50 @@ func (s IfOperStatus) String() string {
 	default:
 		return strconv.FormatUint((uint64)(s), 10)
 	}
+}
+
+// https://docs.microsoft.com/zh-cn/windows/win32/api/iphlpapi/nf-iphlpapi-getipaddrtable
+// IPHLPAPI_DLL_LINKAGE DWORD GetIpAddrTable(
+//  PMIB_IPADDRTABLE pIpAddrTable,
+//  PULONG           pdwSize,
+//  BOOL             bOrder
+//);
+func GetIpAddrTable(order bool) ([]MibIpAddrRowW2k, error) {
+	_order := 0
+	if order {
+		_order = 1
+	}
+
+	bufSize := 1024
+	var buf []byte
+	var r1 uintptr
+	var e1 error
+	for {
+		buf = make([]byte, bufSize)
+
+		r1, _, e1 = getIpAddrTable.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&bufSize)), uintptr(_order))
+		if r1 == ERROR_INSUFFICIENT_BUFFER {
+			continue
+		}
+		break
+	}
+
+	if r1 != NO_ERROR {
+		if e1 != ERROR_SUCCESS {
+			return nil, e1
+		} else {
+			return nil, fmt.Errorf("r1:%v", r1)
+		}
+	}
+
+	table := (*MibIpAddrTable)(unsafe.Pointer(&buf[0]))
+	rows := table.Table[:]
+	err := ChangeSliceSize(&rows, int(table.NumEntries), int(table.NumEntries))
+	if err != nil {
+		return nil, fmt.Errorf("ChangeSliceSize, %v", err)
+	}
+
+	res := make([]MibIpAddrRowW2k, len(rows))
+	copy(res, rows)
+	return res, nil
 }
