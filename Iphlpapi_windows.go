@@ -220,8 +220,8 @@ func (r *MibIpAddrRowW2k) GetAddr() net.IP {
 	return uint322Ip(r.Addr)
 }
 
-func (r *MibIpAddrRowW2k) GetMask() net.IP {
-	return uint322Ip(r.Mask)
+func (r *MibIpAddrRowW2k) GetMask() net.IPMask {
+	return net.IPMask(uint322Ip(r.Mask))
 }
 
 func (r *MibIpAddrRowW2k) GetBCastAddr() net.IP {
@@ -480,6 +480,7 @@ func (aa *IpAdapterAddresses) GetUnicastIpAddress() ([]net.IPNet, error) {
 }
 
 // https://docs.microsoft.com/en-us/windows/desktop/api/iphlpapi/nf-iphlpapi-getadaptersaddresses
+// 实测 win10 x64 下可以获得断开网卡的固定ip
 func AdapterAddresses() ([]*IpAdapterAddresses, error) {
 	var b []byte
 	l := uint32(15000) // recommended initial size
@@ -842,6 +843,7 @@ func (s IfOperStatus) String() string {
 //  PULONG           pdwSize,
 //  BOOL             bOrder
 //);
+// 实测 windows 10 下无法获得断开网卡的ip
 func GetIpAddrTable(order bool) ([]MibIpAddrRowW2k, error) {
 	_order := 0
 	if order {

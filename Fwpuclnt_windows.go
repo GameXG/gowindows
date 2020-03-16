@@ -1,7 +1,6 @@
 package gowindows
 
 import (
-	"fmt"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -18,18 +17,6 @@ var (
 	fwpmFilterAdd0            = fwpuclnt.NewProc("FwpmFilterAdd0")
 	fwpmFilterDeleteById0     = fwpuclnt.NewProc("FwpmFilterDeleteById0")
 )
-
-type FwpmError struct {
-	r1 DWord
-}
-
-func newFwpmError(r1 DWord) error {
-	return &FwpmError{r1: r1}
-}
-
-func (e *FwpmError) Error() string {
-	return fmt.Sprintf("r1:%X", e.r1)
-}
 
 // FwpmEngineOpen0
 // The FwpmEngineOpen0 function opens a session to the filter engine.
@@ -61,7 +48,7 @@ func FwpmEngineOpen0(serverName string, authnService RpcCAuthnType, authIdentity
 		if e1 != ERROR_SUCCESS {
 			return e1
 		} else {
-			return newFwpmError(DWord(r1))
+			return newFwpmError(_HRESULT_TYPEDEF_(r1))
 		}
 	}
 	return nil
@@ -82,7 +69,7 @@ func FwpmEngineClose0(engineHandle Handle) error {
 		if e1 != ERROR_SUCCESS {
 			return e1
 		} else {
-			return newFwpmError(DWord(r1))
+			return newFwpmError(_HRESULT_TYPEDEF_(r1))
 		}
 	}
 	return nil
@@ -107,7 +94,7 @@ func FwpmSubLayerAdd0(engineHandle Handle, subLayer *FwpmSublayer0, sd PSecurity
 		if e1 != ERROR_SUCCESS {
 			return e1
 		} else {
-			return newFwpmError(DWord(r1))
+			return newFwpmError(_HRESULT_TYPEDEF_(r1))
 		}
 	}
 	return nil
@@ -129,7 +116,7 @@ func FwpmSubLayerDeleteByKey0(engineHandle Handle, key *GUID) error {
 		if e1 != ERROR_SUCCESS {
 			return e1
 		} else {
-			return newFwpmError(DWord(r1))
+			return newFwpmError(_HRESULT_TYPEDEF_(r1))
 		}
 	}
 	return nil
@@ -157,7 +144,7 @@ func FwpmGetAppIdFromFileName0(fileName string, appId **FwpByteBlob) error {
 		if e1 != ERROR_SUCCESS {
 			return e1
 		} else {
-			return newFwpmError(DWord(r1))
+			return newFwpmError(_HRESULT_TYPEDEF_(r1))
 		}
 	}
 
@@ -196,7 +183,7 @@ func FwpmFilterAdd0(engineHandle Handle, filter *FwpmFilter0, sd PSecurityDescri
 		if e1 != ERROR_SUCCESS {
 			return e1
 		} else {
-			return newFwpmError(DWord(r1))
+			return newFwpmError(_HRESULT_TYPEDEF_(r1))
 		}
 	}
 
@@ -226,7 +213,7 @@ func FwpmFilterDeleteById0(engineHandle Handle, id FilterId) error {
 		if e1 != ERROR_SUCCESS {
 			return e1
 		} else {
-			return newFwpmError(DWord(r1))
+			return newFwpmError(_HRESULT_TYPEDEF_(r1))
 		}
 	}
 

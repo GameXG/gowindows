@@ -384,6 +384,7 @@ var FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6_DISCARD = GUID{
 	[8]byte{0xa2, 0x24, 0x13, 0xda, 0x89, 0x5a, 0xf3, 0x96},
 }
 
+// 该过滤层允许授权对传出TCP连接的连接请求，以及基于发送的第一个数据包对传出非TCP流量进行授权。
 // c38d57d1-05a7-4c33-904f-7fbceee60e82
 var FWPM_LAYER_ALE_AUTH_CONNECT_V4 = GUID{
 	0xc38d57d1,

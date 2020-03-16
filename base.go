@@ -67,6 +67,13 @@ type wchar_t = uint16
 
 type Overlapped = windows.Overlapped
 
+// https://blog.csdn.net/ixsea/article/details/7272909
+type HRESULT uint32
+
+func (h HRESULT) IsSucceeded() bool {
+	return uint32(h)&(uint32(1)<<31) == 0
+}
+
 type CallError struct {
 	r1 DWord
 }

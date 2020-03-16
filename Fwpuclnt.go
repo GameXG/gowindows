@@ -87,6 +87,24 @@ const (
 	FWP_ACTION_NONE_NO_MATCH       = (0x00000008)
 )
 
+const (
+	FWPM_FILTER_FLAG_NONE                 = (0x00000000)
+	FWPM_FILTER_FLAG_PERSISTENT           = (0x00000001)
+	FWPM_FILTER_FLAG_BOOTTIME             = (0x00000002)
+	FWPM_FILTER_FLAG_HAS_PROVIDER_CONTEXT = (0x00000004)
+	// 高优先
+	// https://docs.microsoft.com/zh-cn/windows/win32/fwp/filter-arbitration
+	FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT                  = (0x00000008)
+	FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED      = (0x00000010)
+	FWPM_FILTER_FLAG_DISABLED                            = (0x00000020)
+	FWPM_FILTER_FLAG_INDEXED                             = (0x00000040)
+	FWPM_FILTER_FLAG_HAS_SECURITY_REALM_PROVIDER_CONTEXT = (0x00000080)
+	FWPM_FILTER_FLAG_SYSTEMOS_ONLY                       = (0x00000100)
+	FWPM_FILTER_FLAG_GAMEOS_ONLY                         = (0x00000200)
+	FWPM_FILTER_FLAG_SILENT_MODE                         = (0x00000400)
+	FWPM_FILTER_FLAG_IPSEC_NO_ACQUIRE_INITIATE           = (0x00000800)
+)
+
 //
 //typedef enum {
 //#if(_WIN32_WINNT >= 0x0501)

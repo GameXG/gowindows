@@ -28,3 +28,12 @@ func TestChangeSliceSize(t *testing.T) {
 		t.Error(d1[4])
 	}
 }
+
+func TestHRESULT_IsSucceeded(t *testing.T) {
+	if HRESULT(FWP_E_ALREADY_EXISTS).IsSucceeded() == true {
+		t.Errorf("")
+	}
+	if HRESULT(11).IsSucceeded() == false {
+		t.Errorf("")
+	}
+}
