@@ -17,8 +17,11 @@ func CreateMmap(name string, size uint32, write bool) (*Mmap, error) {
 
 // 按指定权限创建
 // 主要目的是服务创建，普通用户有权访问，UAC 也没问题。
+// 创建全局可见的内存映射，创建者需要有  SeCreateGlobalPrivilege 特权，访问者不需要有特权。https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfilemappinga
 // securityDescriptor    "D:P(A;OICI;GWGR;;;SY)(A;OICI;GWGR;;;BA)(A;OICI;GWGR;;;IU)(A;OICI;GWGR;;;RC)"
 //“D：P（A; OICI; GA ;;; SY）（A; OICI; GA ;;; BA）（A; OICI; GR ;;; IU）”指定DACL。D：P表示这是一个DACL（而不是SACL ......你很少使用SACL），后面是几个控制谁可以访问的ACE字符串。每一个都是A（允许）并允许对象并包含继承（OICI）。第一个授予系统（SY）和管理员（BA，内置管理员）的所有访问权限（GA - 全部授予）。最后一次授予读取（GR）给交互式用户（IU），这些用户实际登录到会话。
+// https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfilemappinga
+// https://docs.microsoft.com/en-us/windows/win32/termserv/kernel-object-namespaces
 // https://blog.csdn.net/qinlicang/article/details/5538307
 // https://stackoverflow.com/questions/898683/how-to-share-memory-between-services-and-user-processes
 func CreateMmapWithSecurityDescriptor(name string, size uint32, write bool, securityDescriptor string) (*Mmap, error) {
@@ -48,7 +51,7 @@ func CreateMmapWithSecurityDescriptor(name string, size uint32, write bool, secu
 	}
 
 	fileHandle, err := windows.CreateFileMapping(windows.Handle(INVALID_HANDLE_VALUE),
-		security, prot, 0, uint32(size), namePtr)
+		security, prot, 0, size, namePtr)
 	if err != nil {
 		return nil, fmt.Errorf("CreateFileMapping, %v", err)
 	}
