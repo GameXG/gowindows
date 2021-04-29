@@ -1,6 +1,7 @@
 package gowindows
 
 import (
+	"encoding/binary"
 	"fmt"
 	"syscall"
 	"unsafe"
@@ -84,4 +85,37 @@ func newCallError(r1 DWord) error {
 
 func (e *CallError) Error() string {
 	return fmt.Sprintf("r1:%X", e.r1)
+}
+
+func Htonll(val uint64) uint64 {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, val)
+	return *(*uint64)(unsafe.Pointer(&b[0]))
+}
+
+func Htonl(val uint32) uint32 {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, val)
+	return *(*uint32)(unsafe.Pointer(&b[0]))
+}
+
+func Htons(val uint16) uint16 {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, val)
+	return *(*uint16)(unsafe.Pointer(&b[0]))
+}
+
+func Ntohll(val uint64) uint64 {
+	b := (*[8]byte)(unsafe.Pointer(&val))
+	return binary.BigEndian.Uint64((*b)[:])
+}
+
+func Ntohl(val uint32) uint32 {
+	b := (*[4]byte)(unsafe.Pointer(&val))
+	return binary.BigEndian.Uint32((*b)[:])
+}
+
+func Ntohs(val uint16) uint16 {
+	b := (*[2]byte)(unsafe.Pointer(&val))
+	return binary.BigEndian.Uint16((*b)[:])
 }

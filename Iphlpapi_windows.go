@@ -24,6 +24,7 @@ var (
 	notifyRouteChange    = iphlpapi.NewProc("NotifyRouteChange")
 	cancelIPChangeNotify = iphlpapi.NewProc("CancelIPChangeNotify")
 	getIpAddrTable       = iphlpapi.NewProc("GetIpAddrTable")
+	getTcpTable2         = iphlpapi.NewProc("GetTcpTable2")
 )
 
 // https://docs.microsoft.com/zh-cn/windows/desktop/api/iptypes/ns-iptypes-_ip_adapter_addresses_lh
@@ -880,6 +881,52 @@ func GetIpAddrTable(order bool) ([]MibIpAddrRowW2k, error) {
 	}
 
 	res := make([]MibIpAddrRowW2k, len(rows))
+	copy(res, rows)
+	return res, nil
+}
+
+// IPHLPAPI_DLL_LINKAGE ULONG GetTcpTable2(
+//  PMIB_TCPTABLE2 TcpTable,
+//  PULONG         SizePointer,
+//  BOOL           Order
+//);
+// https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-gettcptable2
+func GetTcpTable2(order bool) ([]MibTcpRow2, error) {
+	_order := 0
+	if order {
+		_order = 1
+	}
+
+	bufSize := 1024
+	var buf []byte
+	var r1 uintptr
+	var e1 error
+	for {
+		buf = make([]byte, bufSize)
+
+		r1, _, e1 = getTcpTable2.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&bufSize)), uintptr(_order))
+		if r1 == ERROR_INSUFFICIENT_BUFFER {
+			continue
+		}
+		break
+	}
+
+	if r1 != NO_ERROR {
+		if e1 != ERROR_SUCCESS {
+			return nil, e1
+		} else {
+			return nil, fmt.Errorf("r1:%v", r1)
+		}
+	}
+
+	table := (*MibTcpTable2)(unsafe.Pointer(&buf[0]))
+	rows := table.Table[:]
+	err := ChangeSliceSize(&rows, int(table.NumEntries), int(table.NumEntries))
+	if err != nil {
+		return nil, fmt.Errorf("ChangeSliceSize, %v", err)
+	}
+
+	res := make([]MibTcpRow2, len(rows))
 	copy(res, rows)
 	return res, nil
 }

@@ -565,3 +565,30 @@ func TestUint322Ip(t *testing.T) {
 	}
 
 }
+
+// goos: windows
+//goarch: amd64
+//pkg: github.com/gamexg/gowindows
+//cpu: Intel(R) Core(TM) i5-9600K CPU @ 3.70GHz
+//BenchmarkGetTcpTable2
+//BenchmarkGetTcpTable2-6             2732            420748 ns/op
+func BenchmarkGetTcpTable2(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, err := GetTcpTable2(true)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func TestGetTcpTable2(t *testing.T) {
+	rcpTable, err := GetTcpTable2(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("TestGetTcpTable2\r\n")
+	for _, v := range rcpTable {
+		t.Logf("item:%v\r\n", v.String())
+	}
+}

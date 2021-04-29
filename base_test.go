@@ -1,6 +1,8 @@
 package gowindows
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestChangeSliceSize(t *testing.T) {
 
@@ -35,5 +37,30 @@ func TestHRESULT_IsSucceeded(t *testing.T) {
 	}
 	if HRESULT(11).IsSucceeded() == false {
 		t.Errorf("")
+	}
+}
+
+func TestHton(t *testing.T) {
+	if Htons(0x1122) != 0x2211 {
+		t.Error("0x1122")
+	}
+	if Htonl(0x11223344) != 0x44332211 {
+		t.Error("0x11223344")
+	}
+
+	if Htonll(0x1122334455667788) != uint64(0x8877665544332211) {
+		t.Errorf("0x1122334455667788")
+	}
+}
+
+func TestNtoh(t *testing.T) {
+	if Ntohs(0x2211) != 0x1122 {
+		t.Error("0x2211")
+	}
+	if Ntohl(0x44332211) != 0x11223344 {
+		t.Error("0x44332211")
+	}
+	if Ntohll(0x8877665544332211) != 0x1122334455667788 {
+		t.Error("0x8877665544332211")
 	}
 }
