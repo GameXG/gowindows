@@ -2,6 +2,7 @@ package gowindows
 
 import (
 	"net"
+	"os"
 	"testing"
 	"time"
 	"unsafe"
@@ -582,13 +583,41 @@ func BenchmarkGetTcpTable2(b *testing.B) {
 }
 
 func TestGetTcpTable2(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	tcpAddr, _ := ln.Addr().(*net.TCPAddr)
+	if tcpAddr == nil {
+		t.Fatal(ln.Addr())
+	}
+
 	rcpTable, err := GetTcpTable2(true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log("TestGetTcpTable2\r\n")
+	count := 0
 	for _, v := range rcpTable {
-		t.Logf("item:%v\r\n", v.String())
+		if v.GetLocalAddr().Equal(net.IPv4(127, 0, 0, 1)) && v.GetLocalPort() == tcpAddr.Port &&
+			v.GetRemoteAddr().Equal(net.IPv4zero) && v.GetRemotePort() == 0 {
+
+			if int(v.OwningPid) != os.Getpid() {
+				t.Error(v.OwningPid)
+			}
+
+			if v.State != MIB_TCP_STATE_LISTEN {
+				t.Error(v.State)
+			}
+
+			count++
+		}
+		//t.Logf("item:%v\r\n", v.String())
+	}
+
+	if count != 1 {
+		t.Error(count)
 	}
 }
